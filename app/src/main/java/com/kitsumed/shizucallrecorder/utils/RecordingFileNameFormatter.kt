@@ -26,7 +26,10 @@ object RecordingFileNameFormatter {
     /**
      * Sanitize file name to remove sub-folder ([SafHelper.PATH_SEPARATOR]) characters.
      */
-    private fun sanitizeFileNamePart(value: String): String = value.replace(SafHelper.PATH_SEPARATOR, '_').trim()
+    // Caller names can come from third-party VoIP apps (caller-controlled); strip filesystem-illegal chars and cap length
+    // so createFile() can't fail on >255-byte names and lose the recording.
+    private fun sanitizeFileNamePart(value: String): String =
+        value.replace(SafHelper.PATH_SEPARATOR, '_').replace(Regex("""[\\/:*?"<>|\p{Cntrl}]"""), "_").trim().take(60)
 
     /**
      * Represents the supported placeholders that can be used in the file name template.
@@ -114,7 +117,7 @@ object RecordingFileNameFormatter {
             .replace(FileNamePlaceholder.CROSS_COUNTRY.tag, crossCountryStr)
             .replace(FileNamePlaceholder.PACKAGE_NAME.tag, packageName)
 
-        AppLogger.v( "Formatted base filename: '$baseName' with template '$template'")
+        AppLogger.v( "Formatted base filename with template '$template'") // filename may contain the caller name
         return "$baseName${codec.containerExtension}"
     }
 

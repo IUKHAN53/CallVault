@@ -6,6 +6,8 @@
  *  This software is distributed WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -61,7 +63,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.kitsumed.shizucallrecorder"
+        applicationId = "com.iukhan.callvault" // fork: own package ID per LICENSE Section 7
         minSdk = 30
         targetSdk = 37
         // Keep theses two values hard-coded here and update them per version. (To keep F-Droid compatibility since their parser is very basic)
@@ -77,6 +79,17 @@ android {
                 keyAlias = System.getenv("KEY_ALIAS") ?: throw GradleException("Key alias not provided for release signing. env variable: KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD") ?:throw GradleException("Key password not provided for release signing. env variable: KEY_PASSWORD")
             }
+        }
+    }
+    // Local release signing for the self-hosted APK (callvault.iukhan.tech); keystore.properties is gitignored.
+    val localKeystoreProps = rootProject.file("keystore.properties")
+    if (localKeystoreProps.exists()) {
+        val props = Properties().apply { localKeystoreProps.inputStream().use { load(it) } }
+        signingConfigs.create("local-release") {
+            storeFile = file(props.getProperty("storeFile"))
+            storePassword = props.getProperty("storePassword")
+            keyAlias = props.getProperty("keyAlias")
+            keyPassword = props.getProperty("keyPassword")
         }
     }
     buildTypes {
@@ -95,6 +108,8 @@ android {
                 {
                     signingConfig = signingConfigs.getByName("ci-release")
                 }
+            } else if (localKeystoreProps.exists()) {
+                signingConfig = signingConfigs.getByName("local-release")
             }
         }
     }

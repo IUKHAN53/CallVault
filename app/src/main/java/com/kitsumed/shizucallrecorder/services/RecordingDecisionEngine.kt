@@ -99,7 +99,12 @@ class RecordingDecisionEngine private constructor(context: Context) {
         val intent = Intent(appContext, RecordingForegroundService::class.java).apply {
             action = RecordingForegroundService.ACTION_STOP_RECORDING
         }
-        appContext.startService(intent)
+        // After a missed/declined call the service was never started; startService from the background then throws and would crash the app.
+        try {
+            appContext.startService(intent)
+        } catch (e: IllegalStateException) {
+            AppLogger.w("STOP intent not delivered (service not running / background start blocked).", e)
+        }
         checkAndTriggerSupportNotification();
     }
 

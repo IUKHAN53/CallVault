@@ -93,13 +93,13 @@ data class EnrichedCallData(
                 if (base.osProvidedCallerName.isNullOrBlank()) {
                     callerName = getContactName(context, raw)
                     if (callerName != null) {
-                        AppLogger.v( "Found contact name '$callerName' for number '$raw'")
+                        AppLogger.v( "Found contact name for number '$raw'") // name omitted: redaction only masks digits
                     } else {
                         AppLogger.v( "No contact name found for number '$raw'")
                     }
                 }
 
-                AppLogger.v( "Enriched metadata for number: raw='$raw', standardized='$standardized', crossCountry=$crossCountry, callerName='$callerName'")
+                AppLogger.v( "Enriched metadata for number: raw='$raw', standardized='$standardized', crossCountry=$crossCountry, hasCallerName=${!callerName.isNullOrBlank()}")
                 return@withContext EnrichedCallData(
                     normalisedPhoneNumber = PhoneNumberManager.normalisePhoneNumber(raw), // Safety normalizing, the number should already have been.
                     formattedE164Number = standardized,
@@ -118,7 +118,7 @@ data class EnrichedCallData(
          * @param phoneNumber The phone number to look up, in any format (e.g. raw or E.164).
          * @return The contact name if found and permission is granted, or null otherwise.
          */
-        private fun getContactName(context: Context, phoneNumber: String): String? {
+        internal fun getContactName(context: Context, phoneNumber: String): String? { // also used by RecordingsViewModel
             if (!PermissionChecks.hasContactsPermission(context)) return null
 
             val lookupUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(phoneNumber))

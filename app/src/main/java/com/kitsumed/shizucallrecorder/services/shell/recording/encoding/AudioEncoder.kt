@@ -12,6 +12,7 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import android.os.SystemClock
 import com.kitsumed.shizucallrecorder.data.recording.RecordingCodec
 import com.kitsumed.shizucallrecorder.services.shell.recording.AudioConfig
 import com.kitsumed.shizucallrecorder.utils.AppLogger
@@ -39,6 +40,9 @@ class AudioEncoder(
          * Unit: microseconds
          */
         private const val CODEC_TIMEOUT_US = 1_000L
+
+        /** Max wait for the codec's end-of-stream when finalizing. */
+        private const val EOS_TIMEOUT_MS = 5_000L
     }
 
     private val mediaCodec = MediaCodec.createEncoderByType(codec.mimeType)
@@ -53,7 +57,7 @@ class AudioEncoder(
     private var inputEnded = false
     private var released = false
 
-    init {
+    init { try {
         if (channelCount == 2 && codec.minStereoBitRate != null && bitrate < codec.minStereoBitRate) {
             // In my tests is the minimum, internally the encoder behave weirdly, make two channel of "mono" audio, silence one, saturate, etc.
             // The mediaCodec and mediaMuxer will not throw any error, and will tell you everything is fine with two channels, but it will NOT.
@@ -101,7 +105,11 @@ class AudioEncoder(
 
         mediaCodec.start()
         codecStarted = true
-    }
+    } catch (t: Throwable) {
+        // Codec and muxer are created before these checks; free them or each failed start leaks a codec instance.
+        release()
+        throw t
+    } }
 
     /**
      * Encodes one PCM block.
@@ -168,6 +176,7 @@ class AudioEncoder(
         }
 
         val inputIndex = waitForInputBuffer()
+        if (inputIndex < 0) return
 
         mediaCodec.queueInputBuffer(
             inputIndex,
@@ -248,13 +257,16 @@ class AudioEncoder(
      * @param waitForEndOfStream If true, will continue draining until the end of stream is reached.
      */
     private fun drainOutput(waitForEndOfStream: Boolean = false) {
+        // Some codecs (e.g. Samsung C2) never emit EOS; without a deadline stop() would hang forever holding the engine lock.
+        val deadlineMs = SystemClock.uptimeMillis() + EOS_TIMEOUT_MS
         while (!released) {
             when (val outputIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, CODEC_TIMEOUT_US)) {
                 // When no more encoded data is waiting, we can exit
                 MediaCodec.INFO_TRY_AGAIN_LATER -> {
-                    if (waitForEndOfStream) {
+                    if (waitForEndOfStream && SystemClock.uptimeMillis() < deadlineMs) {
                         continue
                     }
+                    if (waitForEndOfStream) AppLogger.w("Encoder end-of-stream not received within ${EOS_TIMEOUT_MS}ms; finalizing with data so far.")
                     return
                 }
                 // MediaCodec tell us that the output format will follow X format, pass it to MediaMuxer

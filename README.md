@@ -1,3 +1,22 @@
+# CallVault
+
+> **This is a FORK of [ShizuCallRecorder](https://github.com/kitsumed/ShizuCallRecorder) by kitsumed.** It is not affiliated with or endorsed by the original author.
+
+CallVault records phone and WhatsApp calls on Android 11+ without root, using Shizuku. Changes compared to upstream:
+
+- **Recordings tab:** grouped by day and by person, with search, Incoming/Outgoing filters, a built-in player (seek, ±10s, up to 2x speed), and share, call back and delete (also in bulk).
+- **Reliability fixes:** stops recording when Samsung One UI skips the call-ended event, fixes stop/failure races in the recording engine, adds an encoder end-of-stream timeout, fixes a crash on missed calls, sanitizes file names, and guards pause/resume.
+- **Privacy:** cloud backup is turned off and contact names are kept out of logs.
+- **Defaults and UI:** auto-record is on by default, Settings is reorganized, and there's a share-app button.
+
+**Download:** [callvault.iukhan.tech](https://callvault.iukhan.tech), or the [Releases](https://github.com/IUKHAN53/CallVault/releases) page.
+
+Package ID: `com.iukhan.callvault`. Licensed under GPL-3.0 with the upstream's Section 7 additional terms (see `LICENSE`).
+
+---
+
+The original README follows.
+
 # ShizuCallRecorder
 [![GitHub Repo stars](https://img.shields.io/github/stars/kitsumed/ShizuCallRecorder?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHRpdGxlPnN0YXI8L3RpdGxlPjxwYXRoIGQ9Ik0xMiwxNy4yN0wxOC4xOCwyMUwxNi41NCwxMy45N0wyMiw5LjI0TDE0LjgxLDguNjJMMTIsMkw5LjE5LDguNjJMMiw5LjI0TDcuNDUsMTMuOTdMNS44MiwyMUwxMiwxNy4yN1oiIGZpbGw9IndoaXRlIiAvPjwvc3ZnPg%3D%3D&labelColor=gray&color=gold)](https://github.com/kitsumed/ShizuCallRecorder/graphs/traffic)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/kitsumed/ShizuCallRecorder/total?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHRpdGxlPmRvd25sb2FkPC90aXRsZT48cGF0aCBkPSJNNSwyMEgxOVYxOEg1TTE5LDlIMTVWM0g5VjlINUwxMiwxNkwxOSw5WiIgZmlsbD0id2hpdGUiIC8%2BPC9zdmc%2B&label=Downloads&labelColor=gray&color=gold&)](https://github.com/kitsumed/ShizuCallRecorder/releases/)

@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import com.kitsumed.shizucallrecorder.AppUrls
 import com.kitsumed.shizucallrecorder.BuildConfig
+import com.kitsumed.shizucallrecorder.R
 import com.kitsumed.shizucallrecorder.integrations.shizuku.ShizukuConnectionManager
 import com.kitsumed.shizucallrecorder.utils.AppLogger
 /**
@@ -92,6 +93,21 @@ fun Context.openGithubReportIssue() {
     launchSmartIntent(Intent(Intent.ACTION_VIEW).apply { data = AppUrls.GITHUB_NEW_ISSUE.toUri() })
 }
 
+/** Opens CallVault's download page in the browser. */
+fun Context.openCallVaultWebsite() {
+    launchSmartIntent(Intent(Intent.ACTION_VIEW).apply { data = AppUrls.CALLVAULT_WEBSITE.toUri() })
+}
+
+/** Opens the system share sheet with a download link for CallVault. */
+fun Context.shareApp() {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
+        putExtra(Intent.EXTRA_TEXT, getString(R.string.share_app_message, AppUrls.CALLVAULT_WEBSITE))
+    }
+    launchSmartIntent(Intent.createChooser(send, null))
+}
+
 fun Context.openGithubSponsor() {
     launchSmartIntent(Intent(Intent.ACTION_VIEW).apply { data = AppUrls.GITHUB_SPONSOR.toUri() })
 }
@@ -115,5 +131,6 @@ private fun Context.launchSmartIntent(intent: Intent) {
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    startActivity(intent)
+    // No browser / handler installed must not crash the app.
+    try { startActivity(intent) } catch (e: android.content.ActivityNotFoundException) { AppLogger.w("No activity to handle $intent", e) }
 }

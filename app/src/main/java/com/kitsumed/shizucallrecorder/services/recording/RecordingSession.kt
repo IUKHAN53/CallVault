@@ -149,14 +149,15 @@ class RecordingSession(
      * Pauses the recording session.
      */
     fun pause() {
-        shellService?.pauseRecording()
+        // Shell process may have died mid-call (DeadObjectException); don't crash the app over a pause.
+        runCatching { shellService?.pauseRecording() }.onFailure { AppLogger.w("pauseRecording failed.", it) }
     }
 
     /**
      * Resumes the recording session.
      */
     fun resume() {
-        shellService?.resumeRecording()
+        runCatching { shellService?.resumeRecording() }.onFailure { AppLogger.w("resumeRecording failed.", it) }
     }
 
     /**

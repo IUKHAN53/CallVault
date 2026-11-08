@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -64,7 +65,10 @@ import com.kitsumed.shizucallrecorder.data.AppPreferences
 import com.kitsumed.shizucallrecorder.services.callDetection.CallDetectionMode
 import com.kitsumed.shizucallrecorder.system.PersistentFolderPickerContract
 import com.kitsumed.shizucallrecorder.system.openGithubReportIssue
+import com.kitsumed.shizucallrecorder.system.openCallVaultWebsite
+import com.kitsumed.shizucallrecorder.system.openGithub
 import com.kitsumed.shizucallrecorder.system.openGithubWiki
+import com.kitsumed.shizucallrecorder.system.shareApp
 import com.kitsumed.shizucallrecorder.system.storage.SafHelper
 import com.kitsumed.shizucallrecorder.system.takePersistableFolderPermission
 import com.kitsumed.shizucallrecorder.ui.common.ContactSelectionDialog
@@ -200,7 +204,6 @@ fun SettingsContent(
                     fontWeight = FontWeight.Bold
                 )
             }
-            item { AboutSection(versionString = actions.getAppVersion()) }
             item {
                 RecordingSection(
                     preferences = preferences,
@@ -215,6 +218,7 @@ fun SettingsContent(
             item { SecuritySection(preferences, updateTrigger, actions) }
             item { VisualSection(preferences, updateTrigger, actions) }
             item { DebugSection(preferences, updateTrigger, actions, onExportLogs) }
+            item { AboutSection(versionString = actions.getAppVersion()) }
             item {  } // extra padding at bottom
         }
     }
@@ -248,8 +252,28 @@ private fun AboutSection(versionString: String) {
     SettingsSection(title = stringResource(R.string.settings_section_about)) {
         ListItem(
             headlineContent = { Text(versionString) },
+            // Fork attribution required by the upstream license (GPL-3 Section 7 additional terms).
+            supportingContent = { Text(stringResource(R.string.settings_fork_attribution)) },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
+        Button(
+            onClick = { context.shareApp() },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+            Text(stringResource(R.string.settings_share_app))
+        }
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(onClick = { context.openCallVaultWebsite() }, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_website))
+            }
+            OutlinedButton(onClick = { context.openGithub() }, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_original_project))
+            }
+        }
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -263,7 +287,7 @@ private fun AboutSection(versionString: String) {
                 modifier = Modifier.weight(1f)
             ) { Text(stringResource(R.string.settings_view_licenses)) }
         }
-        Button(
+        OutlinedButton(
             onClick = { showSponsorScreen = true },
             modifier = Modifier
                 .fillMaxWidth()
@@ -569,6 +593,90 @@ private fun RecordingSection(
     var showFileNameFormatDialog by remember { mutableStateOf(false) }
 
     SettingsSection(title = stringResource(R.string.settings_section_recording)) {
+        ToggleListItem(
+            label           = stringResource(R.string.settings_auto_record_incoming),
+            checked         = autoRecordIncoming,
+            onCheckedChange = { actions.setAutoRecordIncoming(it) }
+        )
+        AnimatedVisibility(
+            visible = autoRecordIncoming,
+            enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
+                    expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        expandFrom = Alignment.Top
+                    ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 450)) +
+                    shrinkVertically(
+                        animationSpec = tween(durationMillis = 450, easing = LinearOutSlowInEasing),
+                        shrinkTowards = Alignment.Top
+                    )
+        ) {
+            Column {
+                ToggleListItem(
+                    label           = stringResource(R.string.settings_ignore_anonymous_incoming),
+                    checked         = ignoreAnonymousIncoming,
+                    onCheckedChange = { actions.setIgnoreAnonymousIncoming(it) }
+                )
+                ToggleListItem(
+                    label           = stringResource(R.string.settings_ignore_cross_country_incoming),
+                    checked         = ignoreCrossCountryIncoming,
+                    onCheckedChange = { actions.setIgnoreCrossCountryIncoming(it) },
+                    enabled         = ignoreAnonymousIncoming
+                )
+                IgnoreContactsOptions(
+                    label           = stringResource(R.string.settings_ignore_contacts_incoming),
+                    selectedEnum     = ignoreContactsModeIncoming,
+                    selectedCount    = ignoredContactsIncomingCount,
+                    onSelected      = { actions.setIgnoreContactsModeIncoming(it) },
+                    onSelectContacts = onOpenContactsIncoming
+                )
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+
+        ToggleListItem(
+            label           = stringResource(R.string.settings_auto_record_outgoing),
+            checked         = autoRecordOutgoing,
+            onCheckedChange = { actions.setAutoRecordOutgoing(it) }
+        )
+        AnimatedVisibility(
+            visible = autoRecordOutgoing,
+            enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
+                    expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        expandFrom = Alignment.Top
+                    ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 450)) +
+                    shrinkVertically(
+                        animationSpec = tween(durationMillis = 450, easing = LinearOutSlowInEasing),
+                        shrinkTowards = Alignment.Top
+                    )
+        ) {
+            Column {
+                ToggleListItem(
+                    label           = stringResource(R.string.settings_ignore_cross_country_outgoing),
+                    checked         = ignoreCrossCountryOutgoing,
+                    onCheckedChange = { actions.setIgnoreCrossCountryOutgoing(it) }
+                )
+                IgnoreContactsOptions(
+                    label           = stringResource(R.string.settings_ignore_contacts_outgoing),
+                    selectedEnum     = ignoreContactsModeOutgoing,
+                    selectedCount    = ignoredContactsOutgoingCount,
+                    onSelected      = { actions.setIgnoreContactsModeOutgoing(it) },
+                    onSelectContacts = onOpenContactsOutgoing
+                )
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), thickness = 0.5.dp)
+
         val detectionOptions = CallDetectionMode.entries.map { mode ->
             OptionItem(
                 key = mode.key,
@@ -677,89 +785,6 @@ private fun RecordingSection(
             onCheckedChange = { actions.setVibrationEnabled(it) }
         )
 
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
-
-        ToggleListItem(
-            label           = stringResource(R.string.settings_auto_record_incoming),
-            checked         = autoRecordIncoming,
-            onCheckedChange = { actions.setAutoRecordIncoming(it) }
-        )
-        AnimatedVisibility(
-            visible = autoRecordIncoming,
-            enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
-                    expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        ),
-                        expandFrom = Alignment.Top
-                    ),
-            exit = fadeOut(animationSpec = tween(durationMillis = 450)) +
-                    shrinkVertically(
-                        animationSpec = tween(durationMillis = 450, easing = LinearOutSlowInEasing),
-                        shrinkTowards = Alignment.Top
-                    )
-        ) {
-            Column {
-                ToggleListItem(
-                    label           = stringResource(R.string.settings_ignore_anonymous_incoming),
-                    checked         = ignoreAnonymousIncoming,
-                    onCheckedChange = { actions.setIgnoreAnonymousIncoming(it) }
-                )
-                ToggleListItem(
-                    label           = stringResource(R.string.settings_ignore_cross_country_incoming),
-                    checked         = ignoreCrossCountryIncoming,
-                    onCheckedChange = { actions.setIgnoreCrossCountryIncoming(it) },
-                    enabled         = ignoreAnonymousIncoming
-                )
-                IgnoreContactsOptions(
-                    label           = stringResource(R.string.settings_ignore_contacts_incoming),
-                    selectedEnum     = ignoreContactsModeIncoming,
-                    selectedCount    = ignoredContactsIncomingCount,
-                    onSelected      = { actions.setIgnoreContactsModeIncoming(it) },
-                    onSelectContacts = onOpenContactsIncoming
-                )
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
-
-        ToggleListItem(
-            label           = stringResource(R.string.settings_auto_record_outgoing),
-            checked         = autoRecordOutgoing,
-            onCheckedChange = { actions.setAutoRecordOutgoing(it) }
-        )
-        AnimatedVisibility(
-            visible = autoRecordOutgoing,
-            enter = fadeIn(animationSpec = tween(durationMillis = 500)) +
-                    expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        ),
-                        expandFrom = Alignment.Top
-                    ),
-            exit = fadeOut(animationSpec = tween(durationMillis = 450)) +
-                    shrinkVertically(
-                        animationSpec = tween(durationMillis = 450, easing = LinearOutSlowInEasing),
-                        shrinkTowards = Alignment.Top
-                    )
-        ) {
-            Column {
-                ToggleListItem(
-                    label           = stringResource(R.string.settings_ignore_cross_country_outgoing),
-                    checked         = ignoreCrossCountryOutgoing,
-                    onCheckedChange = { actions.setIgnoreCrossCountryOutgoing(it) }
-                )
-                IgnoreContactsOptions(
-                    label           = stringResource(R.string.settings_ignore_contacts_outgoing),
-                    selectedEnum     = ignoreContactsModeOutgoing,
-                    selectedCount    = ignoredContactsOutgoingCount,
-                    onSelected      = { actions.setIgnoreContactsModeOutgoing(it) },
-                    onSelectContacts = onOpenContactsOutgoing
-                )
-            }
-        }
     }
 
     if (showFileNameFormatDialog) {

@@ -105,7 +105,8 @@ class PermissionsViewModel(application: Application) : AndroidViewModel(applicat
             status.callDetectionModeGrantedPermissions.contains(currentPermission)
         }
 
-        when (val nextToRequest = missingPermissions.first()) {
+        // Stale status can mean nothing is missing; first() would throw.
+        when (val nextToRequest = missingPermissions.firstOrNull() ?: return) {
             is AppPermission.Runtime -> {
                 requestRuntimePermission(nextToRequest.manifestString)
             }

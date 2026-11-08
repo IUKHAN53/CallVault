@@ -245,9 +245,13 @@ class ShellRecordingEngine {
                 readyQueue.put(frame) // Send to encoder thread
             }
         } catch (t: Throwable) {
-            if (recordingActive.get()) AppLogger.e("Audio capture loop failed.", t)
-            reportFailure(RecordingFailure.CAPTURE_READ_FAILED)
-            stop()
+            // Read errors after stop() released the AudioRecord are expected; reporting them would flag a good recording as failed
+            // and self-deadlock on stop()'s lock while it joins this thread.
+            if (recordingActive.get()) {
+                AppLogger.e("Audio capture loop failed.", t)
+                reportFailure(RecordingFailure.CAPTURE_READ_FAILED)
+                stop()
+            }
         }
     }
 
@@ -311,8 +315,11 @@ class ShellRecordingEngine {
             }
         } catch (t: Throwable) {
             AppLogger.e("Audio encoding loop failed.", t)
-            reportFailure(RecordingFailure.CAPTURE_READ_FAILED)
-            stop()
+            // While stop() is already running it holds the lock and joins this thread; calling it again would stall.
+            if (recordingActive.get()) {
+                reportFailure(RecordingFailure.CAPTURE_READ_FAILED)
+                stop()
+            }
         }
     }
 
@@ -384,6 +391,7 @@ class ShellRecordingEngine {
                 runCatching {
                     // Wait for up to 2 seconds for the capture thread to finish processing read.
                     cThread.join(2_000L)
+                    if (cThread.isAlive) { cThread.interrupt(); cThread.join(1_000L) }
                 }.onFailure {
                     AppLogger.w("Failed waiting for capture thread shutdown.", it)
                 }
@@ -394,6 +402,9 @@ class ShellRecordingEngine {
             if (eThread != null && eThread !== Thread.currentThread()) {
                 runCatching {
                     eThread.join(4_000L)
+                    // A still-running encoder thread must not touch MediaCodec/MediaMuxer concurrently with finish()/release() below.
+                    if (eThread.isAlive) { eThread.interrupt(); eThread.join(2_000L) }
+                    if (eThread.isAlive) AppLogger.e("Encoder thread still alive after interrupt; finalizing anyway.")
                 }.onFailure {
                     AppLogger.w("Failed waiting for encoder thread shutdown.", it)
                 }

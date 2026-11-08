@@ -48,8 +48,8 @@ class AppPreferences(context: Context) {
         const val RECORD_THIRD_PARTY_CALLS = false
 
         const val POST_RECORDING_FILE_ACTIONS_NOTIFICATION_ENABLED = false
-        const val AUTO_RECORD_INCOMING = false
-        const val AUTO_RECORD_OUTGOING = false
+        const val AUTO_RECORD_INCOMING = true
+        const val AUTO_RECORD_OUTGOING = true
 
         
         // --- Filters & Contacts ---

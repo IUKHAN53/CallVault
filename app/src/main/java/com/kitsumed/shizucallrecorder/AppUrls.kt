@@ -14,6 +14,7 @@ package com.kitsumed.shizucallrecorder
 object AppUrls {
     /** The main GitHub repository for the project. */
     const val GITHUB_REPOSITORY = "https://github.com/kitsumed/ShizuCallRecorder"
+    const val CALLVAULT_WEBSITE = "https://callvault.iukhan.tech"
 
     /** The GitHub Sponsors page for the project, where users can financially support. */
     const val GITHUB_SPONSOR = "https://github.com/sponsors/kitsumed#:~:text=Select a tier"

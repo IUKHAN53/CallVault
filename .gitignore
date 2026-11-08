@@ -46,3 +46,6 @@ docs/.vitepress/cache
 
 # Dependency directories
 node_modules/
+# Local release signing (never commit)
+keystore/
+keystore.properties

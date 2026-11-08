@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -55,6 +56,9 @@ class InCallService : InCallService() {
     /** Flag to ensure the [RecordingDecisionEngine] pipeline is only executed once per call session.*/
     private var isPipelineExecuted = false
 
+    /** Running decision pipeline, cancelled on release so a late START can't follow the STOP of a short call. */
+    private var pipelineJob: Job? = null
+
     // Callback reference used to safely manage the listener lifespan
     private val callCallback = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
@@ -69,6 +73,7 @@ class InCallService : InCallService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        releasePrimaryTrackedCall() // Telecom unbinding means no more call events; don't leave a recording running.
         runCatching { serviceScope.cancel() } // Prevent garbage collection issue, close and free the task if any
     }
 
@@ -124,6 +129,13 @@ class InCallService : InCallService() {
 
 
         // https://github.com/kitsumed/ShizuCallRecorder/issues/81 Dual-SIM users may have null AccountHandle due to OEM bug, causing crash.
+        // Samsung One UI may never deliver onCallRemoved; treat DISCONNECTING/DISCONNECTED as the end of the call.
+        if (state == Call.STATE_DISCONNECTED || state == Call.STATE_DISCONNECTING) {
+            AppLogger.i("Primary call reached ${callStateToString(state)}. Ending recording.")
+            releasePrimaryTrackedCall()
+            return
+        }
+
         if (call.details.state == Call.STATE_SELECT_PHONE_ACCOUNT) {
             AppLogger.d( "Call is in STATE_SELECT_PHONE_ACCOUNT. This state may not include a AccountHandle. Ignoring.")
             return
@@ -176,7 +188,7 @@ class InCallService : InCallService() {
                 isCallAudioVoIpBased = isVoip || isWifiCall, // Wi-Fi call also uses the same audio logic as VoIP. issue #136
             )
 
-            serviceScope.launch {
+            pipelineJob = serviceScope.launch {
                 val intentSentSuccessfully = RecordingDecisionEngine.getInstance(this@InCallService).executeDecisionPipeline(rawCallData)
 
                 // If the Intent IPC pipeline fails structurally (e.g. FGS launching exception), reset flag to allow retries
@@ -196,6 +208,8 @@ class InCallService : InCallService() {
 
         // Sever the listener relation to prevent framework memory leaks
         trackedCall.unregisterCallback(callCallback)
+        pipelineJob?.cancel()
+        pipelineJob = null
 
         // If an intent (Record or Standby) was successfully pushed to the FGS, we must shut it down
         if (isPipelineExecuted) {
