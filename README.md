@@ -9,7 +9,7 @@ CallVault records phone and WhatsApp calls on Android 11+ without root, using Sh
 - **Privacy:** cloud backup is turned off and contact names are kept out of logs.
 - **Defaults and UI:** auto-record is on by default, Settings is reorganized, and there's a share-app button.
 
-**Download:** [callvault.iukhan.tech](https://callvault.iukhan.tech), or the [Releases](https://github.com/IUKHAN53/CallVault/releases) page.
+**Download:** [iukhan.tech/tools/callvault](https://iukhan.tech/tools/callvault), or the [Releases](https://github.com/IUKHAN53/CallVault/releases) page.
 
 Package ID: `com.iukhan.callvault`. Licensed under GPL-3.0 with the upstream's Section 7 additional terms (see `LICENSE`).
 
